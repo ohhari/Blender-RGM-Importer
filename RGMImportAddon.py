@@ -13,9 +13,9 @@
 
 # Add-on metadata
 bl_info = {
-    "name": "Blender Rgm Importer",
+    "name": "Rgm Importer",
     "author": "ohari",
-    "description": "Imports Rgm Files into Blender",
+    "description": "Imports Rgm Files",
     "version": (1, 0, 0),
     "blender": (4, 2, 3),
     "location": "File > Import > Rgm (.rgm)",
@@ -1039,7 +1039,7 @@ def RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk): #To Do
 
         #mat = mathutils.Matrix(((1, 0, 0, 0), (-1, -1, -1, -1), (-1, -1, -1, -1), (0, 0, 0, 1)))
         #imat = mathutils.Matrix(((-1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)))
-
+        x_mirror = False
         # Read bones
         for k in range(numBones):
             dataBone = oChunk.aChildren[k + 1]
@@ -1062,6 +1062,9 @@ def RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk): #To Do
             #matrix[2] = (-matrix_in[1][0], matrix_in[1][2], matrix_in[1][1], matrix_in[1][3])
 
             # Create bone
+            if importData.mirrorAxis:#"orient" in dataBone.sName == 0 and matrix[0][0] == -1.0:
+                x_mirror = True
+
             b = edit_bones.new(dataBone.sName)
             #b.head = (0.0, 0.0, 0.0)
             b.tail = (0.0, 0.0, 1.0)
@@ -1074,12 +1077,12 @@ def RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk): #To Do
             # Set bone parent & transforms
             if parent >= 0:
                 #tworld = sworld * transf. matrix * sworld inverse
-                print("Name: ", dataBone.sName)
-                print("ID: ", k)
-                print("ParentID: ", parent)
+                #print("Name: ", dataBone.sName)
+                #print("ID: ", k)
+                #print("ParentID: ", parent)
                 #print(matrix)
                 #matrix = imat @ matrix @ mat
-                print("Matrix: ", matrix)
+                #print("Matrix: ", matrix)
                 #print("Bonematrix: ", b.matrix)
                 b.parent = bone_array[parent]
 
@@ -1099,14 +1102,17 @@ def RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk): #To Do
                 matrix_m = matrix_i1 @ matrix_i2
 
                 matrix_o = mathutils.Matrix(((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 1)))
-                matrix_o[0] = (matrix_m[0][0], matrix_m[0][1], matrix_m[0][2], -matrix[0][3] + matrix_p[0][3])
-                matrix_o[1] = (matrix_m[1][0], matrix_m[1][1], matrix_m[1][2], matrix[1][3] + matrix_p[1][3])
-                matrix_o[2] = (matrix_m[2][0], matrix_m[2][1], matrix_m[2][2], matrix[2][3] + matrix_p[2][3])
 
-                #Alternativ
-                #matrix_o[0] = (matrix_m[0][0], matrix_m[0][1], matrix_m[0][2], matrix[0][3] + matrix_p[0][3])
-                #matrix_o[1] = (matrix_m[1][0], matrix_m[1][1], matrix_m[1][2], -matrix[1][3] + matrix_p[1][3])
-                #matrix_o[2] = (matrix_m[2][0], matrix_m[2][1], matrix_m[2][2], matrix[2][3] + matrix_p[2][3])
+                if x_mirror == True:
+                    #Mirror on x-axis
+                    matrix_o[0] = (matrix_m[0][0], matrix_m[0][1], matrix_m[0][2], -matrix[0][3] + matrix_p[0][3])
+                    matrix_o[1] = (matrix_m[1][0], matrix_m[1][1], matrix_m[1][2], matrix[1][3] + matrix_p[1][3])
+                    matrix_o[2] = (matrix_m[2][0], matrix_m[2][1], matrix_m[2][2], matrix[2][3] + matrix_p[2][3])
+                else:
+                    #Mirror on y-axis
+                    matrix_o[0] = (matrix_m[0][0], matrix_m[0][1], matrix_m[0][2], matrix[0][3] + matrix_p[0][3])
+                    matrix_o[1] = (matrix_m[1][0], matrix_m[1][1], matrix_m[1][2], -matrix[1][3] + matrix_p[1][3])
+                    matrix_o[2] = (matrix_m[2][0], matrix_m[2][1], matrix_m[2][2], matrix[2][3] + matrix_p[2][3])
 
                 #print(matrix_o)
                 b.transform(matrix_o)#matrix @ bone_array[parent].matrix)
@@ -1115,7 +1121,7 @@ def RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk): #To Do
             else:
                 print("Name: ", dataBone.sName)
                 print("ID: ", k)
-                #print(matrix)
+                print(matrix)
                 matrix_o = mathutils.Matrix(((0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 0), (0, 0, 0, 1)))
                 matrix_o[0] = (matrix[0][0], matrix[0][2], matrix[0][1], matrix[0][3])
                 matrix_o[1] = (matrix[2][0], matrix[2][2], matrix[2][1], matrix[2][3])
@@ -1125,7 +1131,7 @@ def RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk): #To Do
                 #print(b.matrix)
 
             #Bone created
-            #print("Bone: " + dataBone.sName + " created!")
+            print("Bone: " + dataBone.sName + " created!")
         bpy.ops.object.mode_set(mode='OBJECT')
             
 def RgmIntoBlender_FoldModl_DataMrks(importData, oChunk): #To Do
@@ -1336,7 +1342,8 @@ def RgmIntoBlender_FoldModl(importData, oChunk):#, mMultiMat):
     while i < oChunk.iChildCount:
         if oChunk.aChildren[i].sType == "FOLDSKEL":
             print("Skeleton-Folder found")
-            RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk.aChildren[i])
+            if importData.importBones == True:
+                RgmIntoBlender_FoldMesh_FoldSkel(importData, oChunk.aChildren[i])
         i = i + 1
 
     # Import the rest
@@ -1347,10 +1354,12 @@ def RgmIntoBlender_FoldModl(importData, oChunk):#, mMultiMat):
             #print("Location: ",oChunk.aChildren[i].sName)
         elif oChunk.aChildren[i].sType == "FOLDMESH":
             print("Mesh-Folder found")
-            #RgmIntoBlender_FoldMesh(importData, oChunk.aChildren[i])
+            if importData.importMeshes == True:
+                RgmIntoBlender_FoldMesh(importData, oChunk.aChildren[i])
         elif oChunk.aChildren[i].sType == "DATAMRKS":
             print("Datamarks found")
-            #RgmIntoBlender_FoldModl_DataMrks(importData, oChunk.aChildren[i])
+            #if importData.importDatamarks == True:
+                #RgmIntoBlender_FoldModl_DataMrks(importData, oChunk.aChildren[i])
         elif oChunk.aChildren[i].sType == "FOLDMTRL":
             print("Material-Folder found")
             if importData.importTextures == True:
@@ -1576,7 +1585,11 @@ class ImportRgm():
         self.resetScene = False
         self.importTextures = False
         self.importAnimations = False
+        self.importMeshes = True
+        self.importBones = False
+        self.importDatamarks = False
         self.importDirectory = 'Work'
+        self.mirrorAxis = False
         self.sAssetDirectory = "C:/Users/Carsten/Desktop/coh/CoH2" #assets/data" #organized COH file directory     
         self.sWorkingDirectory = "" #rgm file directory
         self.debug = True
@@ -1584,11 +1597,15 @@ class ImportRgm():
         self.sModelName = "" #panzerfaust
         self.sModelPath = "" #.rgm
         
-    def setData(self, resetScene, modelPath, importTextures, importAnimations, importDirectory):
+    def setData(self, resetScene, modelPath, importTextures, importAnimations, importDirectory, importMeshes, importBones, importDatamarks, mirrorAxis):
         self.resetScene = resetScene
         self.importTextures = importTextures
         self.importAnimations = importAnimations
         self.importDirectory = importDirectory
+        self.importMeshes = importMeshes
+        self.importBones = importBones
+        self.importDatamarks = importDatamarks
+        self.mirrorAxis = mirrorAxis
         self.sWorkingDirectory = os.path.dirname(modelPath).replace('\\', '/')
         #directory = os.path.dirname(os.path.abspath(sFilename)).replace('\\', '/')
         self.sModelPath = modelPath
@@ -1598,6 +1615,8 @@ class ImportRgm():
         if self.resetScene:
             bpy.ops.object.select_all(action='SELECT')
             bpy.ops.object.delete(use_global=False)
+            for armatures in bpy.data.armatures:
+                bpy.data.armatures.remove(armatures)  
             for collection in bpy.data.collections:
                 collection.user_clear()
                 bpy.data.collections.remove(collection)        
@@ -1659,16 +1678,41 @@ class ImportRgmAddon(Operator, ImportHelper):
         name = "Import Model", 
         description = "File path of .rgm model file", 
         maxlen = 1024)
+    
+    importMeshes: BoolProperty(
+        name = "Import Meshes",
+        description = "Import meshes from .rgm model files",
+        default = True,
+    )
+
+    importBones: BoolProperty(
+        name = "Import Bones",
+        description = "Import bones from .rgm model files",
+        default = False,
+    )
+
+    mirrorAxis: BoolProperty(
+        name = "Mirror Axis",
+        description = "Mirror the axis when importing  bones",
+        default = False,
+    )
+
+
+    importDatamarks: BoolProperty(
+        name = "Import Datamarks",
+        description = "Import datamarks from .rgm model files",
+        default = False,
+    )
         
     importTextures: BoolProperty(
         name = "Import Textures",
-        description = "Import .rgt/.dds texture files",
+        description = "Import textures from .rgt/.dds texture files",
         default = False,
-        )
+    )
     
     importAnimations: BoolProperty(
         name = "Import Animations",
-        description = "Import the .rga animation file",
+        description = "Import animations from .rga animation file",
         default = False,
     )
         
@@ -1683,7 +1727,7 @@ class ImportRgmAddon(Operator, ImportHelper):
         #preferences = context.preferences
         #addon_prefs = preferences.addons[__name__].preferences
         importer = ImportRgm()
-        importer.setData(self.resetScene, self.filepath, self.importTextures, self.importAnimations, self.importDirectory)
+        importer.setData(self.resetScene, self.filepath, self.importTextures, self.importAnimations, self.importDirectory, self.importMeshes, self.importBones, self.importDatamarks, self.mirrorAxis)
         importer.loadRgm()
         return {'FINISHED'}
     
